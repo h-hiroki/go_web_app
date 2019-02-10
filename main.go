@@ -28,7 +28,6 @@ type Task struct {
 func taskHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET": // index
-
 		// DBに接続する
 		// 第二引数 user:password@tcp(host:port)/dbname
 		db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/test_db")
@@ -37,13 +36,6 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer db.Close()
 
-		var (
-			id        int
-			message   string
-			status    int
-			createdAt string
-			updatedAt string
-		)
 		rows, err := db.Query(`
 			SELECT
 				id, message, status, created_at, updated_at
@@ -56,8 +48,15 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 			log.Fatal(err)
 		}
 		defer rows.Close()
-		Tasks := []Task{}
 
+		Tasks := []Task{}
+		var (
+			id        int
+			message   string
+			status    int
+			createdAt string
+			updatedAt string
+		)
 		for rows.Next() {
 			err = rows.Scan(&id, &message, &status, &createdAt, &updatedAt)
 			if err != nil {
@@ -66,8 +65,6 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 
 			Tasks = append(Tasks, Task{id, message, status, createdAt, updatedAt})
 		}
-
-		// fmt.Println(Tasks)
 
 		getTask := ResponseObject{http.StatusOK, Tasks}
 
@@ -80,7 +77,65 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(res)
 	case "POST": // create
-		fmt.Println("新規TODO作成")
+		// DBに接続する
+		// 第二引数 user:password@tcp(host:port)/dbname
+		db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/test_db")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
+
+		// insertする
+		// TODO requestのbodyを読み込んでそのメッセージを更新する
+		_, err = db.Exec(`
+		INSERT INTO tasks(message, status, created_at, updated_at) VALUES('WebAPI inserted.', 0, now(), now())
+		`)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// 最新のtasksテーブルの結果を取得する
+		rows, err := db.Query(`
+			SELECT
+				id, message, status, created_at, updated_at
+			FROM tasks
+			WHERE deleted_at IS NULL
+			ORDER BY id DESC
+			LIMIT 20
+		`)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer rows.Close()
+
+		Tasks := []Task{}
+		var (
+			id        int
+			message   string
+			status    int
+			createdAt string
+			updatedAt string
+		)
+		for rows.Next() {
+			err = rows.Scan(&id, &message, &status, &createdAt, &updatedAt)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			Tasks = append(Tasks, Task{id, message, status, createdAt, updatedAt})
+		}
+
+		getTask := ResponseObject{http.StatusOK, Tasks}
+
+		res, err := json.Marshal(getTask)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(res)
+
 	default:
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
