@@ -16,3 +16,13 @@ CREATE TABLE `tasks` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=40 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
+
+# WebAPI仕様
+
+|method|path|require request body|
+|:--|:--|:--|
+|GET|/task|none|
+|POST|/task|{"message": "add new task"}|
+|GET|/task/{task_id}|none|
+|POST|/task/{task_id}|{"id": 1, "message": "update task message", "status": 1}|
+|DELETE|/task/{task_id}|none|
