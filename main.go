@@ -3,19 +3,73 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+
+	"database/sql"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // ResponseObject はお試し用の構造体。なにもいみはない
 type ResponseObject struct {
 	Status int    `json:"status"`
-	Result string `json:"result"`
+	Result []Task `json:"result"`
+}
+
+type Task struct {
+	ID        int    `json:"id"`
+	Message   string `json:"message"`
+	Status    int    `json:"status"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 func taskHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET": // index
-		getTask := ResponseObject{http.StatusOK, "OK"}
+
+		// DBに接続する
+		// 第二引数 user:password@tcp(host:port)/dbname
+		db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/test_db")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
+
+		var (
+			id        int
+			message   string
+			status    int
+			createdAt string
+			updatedAt string
+		)
+		rows, err := db.Query(`
+			SELECT
+				id, message, status, created_at, updated_at
+			FROM tasks
+			WHERE deleted_at IS NULL
+			ORDER BY id DESC
+			LIMIT 20
+		`)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer rows.Close()
+		Tasks := []Task{}
+
+		for rows.Next() {
+			err = rows.Scan(&id, &message, &status, &createdAt, &updatedAt)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			Tasks = append(Tasks, Task{id, message, status, createdAt, updatedAt})
+		}
+
+		// fmt.Println(Tasks)
+
+		getTask := ResponseObject{http.StatusOK, Tasks}
 
 		res, err := json.Marshal(getTask)
 		if err != nil {
