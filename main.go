@@ -11,12 +11,13 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-// ResponseObject はお試し用の構造体。なにもいみはない
+// ResponseObject レスポンス共通の形式を構築する
 type ResponseObject struct {
 	Status int    `json:"status"`
 	Result []Task `json:"result"`
 }
 
+// Task タスクデータを構築する
 type Task struct {
 	ID        int    `json:"id"`
 	Message   string `json:"message"`
